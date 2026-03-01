@@ -2,9 +2,9 @@
 
 ## Introduction
 
-This is a Model Context Protocol (MCP) server that provides access to stock market data from [Financial Datasets](https://www.financialdatasets.ai/). 
+This is a Model Context Protocol (MCP) server that provides access to stock market data from [Financial Datasets](https://www.financialdatasets.ai/) and [Alpha Vantage](https://www.alphavantage.co/). 
 
-It allows Claude and other AI assistants to retrieve income statements, balance sheets, cash flow statements, stock prices, and market news directly through the MCP interface.
+It allows Claude and other AI assistants to retrieve income statements, balance sheets, cash flow statements, stock prices, technical indicators, and market news directly through the MCP interface.
 
 ## Available Tools
 
@@ -19,6 +19,17 @@ This MCP server provides the following tools:
 - **get_crypto_prices**: Gets historical prices for a crypto currency.
 - **get_historical_crypto_prices**: Gets historical prices for a crypto currency.
 - **get_current_crypto_price**: Get the current / latest price of a crypto currency.
+
+### Alpha Vantage Tools
+- **search_symbols**: Search for stock symbols and companies matching keywords.
+- **get_alpha_vantage_quote**: Get real-time price and volume for a ticker.
+- **get_alpha_vantage_intraday**: Get intraday time series (1min, 5min, etc.).
+- **get_alpha_vantage_daily**: Get daily historical prices.
+- **get_company_overview**: Get company info, ratios, and description.
+- **get_alpha_vantage_fundamentals**: Get fundamental data (Income Statement, Balance Sheet, etc.).
+- **get_alpha_vantage_news**: Get market news and sentiment analysis.
+- **get_currency_exchange_rate**: Get real-time FX or Crypto exchange rates.
+- **get_technical_indicator**: Get technical indicators (SMA, RSI, EMA, etc.).
 
 ## Setup
 
@@ -60,8 +71,9 @@ This MCP server provides the following tools:
    # Create .env file for your API keys
    cp .env.example .env
 
-   # Set API key in .env
-   FINANCIAL_DATASETS_API_KEY=your-financial-datasets-api-key
+    # Set API keys in .env
+    FINANCIAL_DATASETS_API_KEY=your-financial-datasets-api-key
+    ALPHA_VANTAGE_API_KEY=your-alpha-vantage-api-key
    ```
 
 5. Run the server:
