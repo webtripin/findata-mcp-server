@@ -118,4 +118,15 @@ This MCP server provides the following tools:
 6. Try asking Claude questions like:
    - "What are Apple's recent income statements?"
    - "Show me the current price of Tesla stock"
-   - "Get historical prices for MSFT from 2024-01-01 to 2024-12-31"
+   ---
+
+## Roadmap & Contributions
+
+Interested in contributing? We have an ambitious roadmap focusing on:
+1. 🇮🇳 **Indian Market Integration** (NSE/BSE support)
+2. 🧠 **Intelligent Data Pre-processing** (pandas-ta indicators)
+3. ⚡ **Performance & Caching Layer**
+4. 🗞️ **Sentiment & Macro Signals**
+
+Check out the [ROADMAP.md](ROADMAP.md) for a full breakdown of planned features and how you can help!
+
