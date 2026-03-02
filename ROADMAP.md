@@ -7,8 +7,9 @@ We’ve identified four key "pillars" for improvement and are looking for contri
 ## 1. 🇮🇳 Indian Market Integration (High Priority)
 While the current core supports global/US data, we want to make this the go-to MCP server for the Indian Stock Market (NSE/BSE).
 
-*   **Task:** Add a `BreezeProvider` or `UpstoxProvider` to allow users with broker credentials to stream live data.
-*   **Task:** Implement a fallback mechanism using `yfinance` for users without API keys.
+*   ✅ **Completed:** Integrated [Zerodha Kite Connect API](./README.md#zerodha-kite-tools-indian-market) for live portfolio and market data streaming.
+*   **Task:** Add a `BreezeProvider` or `UpstoxProvider` for users who do not use Zerodha.
+*   **Task:** Implement a fallback mechanism using `yfinance` for users without any API keys.
 *   **Contribution Level:** Intermediate (Python, API Integration)
 
 ## 2. 🧠 Intelligent Data Pre-processing
