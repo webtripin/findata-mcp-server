@@ -6,6 +6,12 @@ import sys
 from mcp.server.fastmcp import FastMCP
 from dotenv import load_dotenv
 
+# Try importing kiteconnect; if it fails, set to None so we can handle it gracefully.
+try:
+    from kiteconnect import KiteConnect
+except ImportError:
+    KiteConnect = None
+
 # Configure logging to write to stderr
 logging.basicConfig(
     level=logging.INFO,
@@ -17,8 +23,33 @@ logger = logging.getLogger("financial-datasets-mcp")
 # Initialize FastMCP server
 mcp = FastMCP("financial-datasets")
 
+# Constants
 FINANCIAL_DATASETS_API_BASE = "https://api.financialdatasets.ai"
 ALPHA_VANTAGE_API_BASE = "https://www.alphavantage.co/query"
+
+# Kite State Management
+kite_client = None
+kite_api_key = None
+kite_api_secret = None
+kite_access_token = None
+
+def init_kite_client():
+    global kite_client, kite_api_key, kite_api_secret
+    if KiteConnect is None:
+        return
+        
+    load_dotenv()
+    kite_api_key = os.environ.get("KITE_API_KEY")
+    kite_api_secret = os.environ.get("KITE_API_SECRET")
+    
+    if kite_api_key and kite_api_secret:
+        try:
+            kite_client = KiteConnect(api_key=kite_api_key)
+        except Exception as e:
+            logger.error(f"Failed to initialize Kite connect client: {e}")
+
+# Call init once at startup
+init_kite_client()
 
 
 async def make_request(url: str) -> dict[str, any] | None:
@@ -633,9 +664,189 @@ async def get_technical_indicator(symbol: str, indicator: str, interval: str = "
     }, indent=2)
 
 
+# --- Zerodha Kite Tools ---
+
+def require_kite_auth(func):
+    """Decorator to check if Kite is authenticated before calling a tool."""
+    def wrapper(*args, **kwargs):
+        if not kite_client:
+            return "Zerodha Kite is not configured. Please set KITE_API_KEY and KITE_API_SECRET."
+        if not kite_access_token:
+            return "Kite is not authenticated. Please generate a login URL using `kite_login`, login, and pass the request_token to `kite_generate_session`."
+        return func(*args, **kwargs)
+    return wrapper
+
+
+@mcp.tool()
+def kite_login() -> str:
+    """Get the login URL for Zerodha Kite. The user must visit this URL and log in to authorize the app.
+    After logging in, the URL will redirect. Copy the 'request_token' from the redirected URL
+    and pass it to `kite_generate_session`.
+    """
+    if not kite_client:
+        return "Zerodha Kite is not configured. Please set KITE_API_KEY and KITE_API_SECRET in the .env file."
+    
+    login_url = kite_client.login_url()
+    return f"Please visit the following URL to log in: {login_url}\n\nAfter logging in, you will be redirected. Copy the 'request_token' from the URL and use the `kite_generate_session` tool with it."
+
+@mcp.tool()
+def kite_generate_session(request_token: str) -> str:
+    """Generate the access token using the request token obtained from the login flow."""
+    global kite_access_token
+    
+    if not kite_client or not kite_api_secret:
+        return "Zerodha Kite is not configured properly."
+        
+    try:
+        data = kite_client.generate_session(request_token, api_secret=kite_api_secret)
+        kite_access_token = data["access_token"]
+        kite_client.set_access_token(kite_access_token)
+        return "Successfully authenticated with Zerodha Kite. You can now use the Kite portfolio and trading tools."
+    except Exception as e:
+        return f"Failed to generate session: {str(e)}"
+
+@mcp.tool()
+def kite_get_profile() -> str:
+    """Get the user's profile information from Zerodha."""
+    if not kite_client or not kite_access_token:
+         return "Kite is not authenticated. Please generate a login URL using `kite_login`, login, and pass the request_token to `kite_generate_session`."
+         
+    try:
+        profile = kite_client.profile()
+        return json.dumps(profile, indent=2)
+    except Exception as e:
+        return f"Error fetching profile: {str(e)}"
+
+@mcp.tool()
+def kite_get_margins(segment: str = "equity") -> str:
+    """Get account margins (funds available) from Zerodha.
+    
+    Args:
+        segment: 'equity' or 'commodity'
+    """
+    if not kite_client or not kite_access_token:
+         return "Kite is not authenticated. Please generate a login URL using `kite_login`, login, and pass the request_token to `kite_generate_session`."
+         
+    try:
+        margins = kite_client.margins(segment)
+        return json.dumps(margins, indent=2)
+    except Exception as e:
+        return f"Error fetching margins: {str(e)}"
+
+@mcp.tool()
+def kite_get_holdings() -> str:
+    """Get the user's long-term portfolio holdings from Zerodha."""
+    if not kite_client or not kite_access_token:
+         return "Kite is not authenticated. Please generate a login URL using `kite_login`, login, and pass the request_token to `kite_generate_session`."
+         
+    try:
+        holdings = kite_client.holdings()
+        return json.dumps(holdings, indent=2)
+    except Exception as e:
+        return f"Error fetching holdings: {str(e)}"
+
+@mcp.tool()
+def kite_get_positions() -> str:
+    """Get the user's current day/overnight positions from Zerodha."""
+    if not kite_client or not kite_access_token:
+         return "Kite is not authenticated. Please generate a login URL using `kite_login`, login, and pass the request_token to `kite_generate_session`."
+         
+    try:
+        positions = kite_client.positions()
+        return json.dumps(positions, indent=2)
+    except Exception as e:
+        return f"Error fetching positions: {str(e)}"
+
+@mcp.tool()
+def kite_get_orders() -> str:
+    """Get the list of all orders."""
+    if not kite_client or not kite_access_token:
+         return "Kite is not authenticated. Please generate a login URL using `kite_login`, login, and pass the request_token to `kite_generate_session`."
+         
+    try:
+        orders = kite_client.orders()
+        return json.dumps(orders, indent=2, default=str) # default=str to handle datetime objects
+    except Exception as e:
+        return f"Error fetching orders: {str(e)}"
+
+
+@mcp.tool()
+def kite_get_quote(instruments: str) -> str:
+    """Get real-time quotes for one or more NSE/BSE instruments.
+    
+    Args:
+        instruments: Comma-separated list of instrument strings (e.g. 'NSE:INFY', 'BSE:RELIANCE')
+    """
+    if not kite_client or not kite_access_token:
+         return "Kite is not authenticated. Please generate a login URL using `kite_login`, login, and pass the request_token to `kite_generate_session`."
+         
+    try:
+        instrument_list = [i.strip() for i in instruments.split(",")]
+        quote = kite_client.quote(instrument_list)
+        return json.dumps(quote, indent=2, default=str)
+    except Exception as e:
+        return f"Error fetching quote: {str(e)}"
+
+@mcp.tool()
+def kite_get_historical_data(instrument_token: int, from_date: str, to_date: str, interval: str) -> str:
+    """Get historical OHLC data for an instrument token.
+    
+    Args:
+        instrument_token: The numerical token for the instrument (obtained from instruments API/quote)
+        from_date: Start date (e.g., '2023-01-01 09:15:00')
+        to_date: End date (e.g., '2023-01-02 15:30:00')
+        interval: 'minute', 'day', '3minute', '5minute', '10minute', '15minute', '30minute', '60minute'
+    """
+    if not kite_client or not kite_access_token:
+         return "Kite is not authenticated. Please generate a login URL using `kite_login`, login, and pass the request_token to `kite_generate_session`."
+         
+    try:
+        history = kite_client.historical_data(instrument_token, from_date, to_date, interval)
+        return json.dumps(history, indent=2, default=str)
+    except Exception as e:
+        return f"Error fetching historical data: {str(e)}"
+
+@mcp.tool()
+def kite_place_order(tradingsymbol: str, exchange: str, transaction_type: str, quantity: int, order_type: str = "MARKET", product: str = "MIS", price: float = None) -> str:
+    """Place a new order on Zerodha Kite.
+    
+    Args:
+        tradingsymbol: Symbol of the instrument (e.g., 'INFY')
+        exchange: Exchange (e.g., 'NSE', 'BSE')
+        transaction_type: 'BUY' or 'SELL'
+        quantity: Order quantity
+        order_type: 'MARKET', 'LIMIT', 'SL', 'SL-M'
+        product: 'MIS' (Intraday) or 'CNC' (Delivery) or 'NRML'
+        price: Required for LIMIT/SL orders
+    """
+    if not kite_client or not kite_access_token:
+         return "Kite is not authenticated. Please generate a login URL using `kite_login`, login, and pass the request_token to `kite_generate_session`."
+         
+    try:
+        # Convert string constants to KiteConnect constants behind the scenes if needed
+        params = {
+            "variety": kite_client.VARIETY_REGULAR,
+            "exchange": exchange.upper(),
+            "tradingsymbol": tradingsymbol.upper(),
+            "transaction_type": transaction_type.upper(),
+            "quantity": int(quantity),
+            "product": product.upper(),
+            "order_type": order_type.upper()
+        }
+        
+        if price:
+            params["price"] = float(price)
+
+        order_id = kite_client.place_order(**params)
+        return f"Successfully placed order! Order ID: {order_id}"
+    except Exception as e:
+        return f"Error placing order: {str(e)}"
+
+
 if __name__ == "__main__":
     # Log server startup
     logger.info("Starting Financial Datasets MCP Server...")
+
 
     # Initialize and run the server
     mcp.run(transport="stdio")

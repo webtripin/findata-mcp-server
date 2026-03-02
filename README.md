@@ -2,9 +2,9 @@
 
 ## Introduction
 
-This is a Model Context Protocol (MCP) server that provides access to stock market data from [Financial Datasets](https://www.financialdatasets.ai/) and [Alpha Vantage](https://www.alphavantage.co/). 
+This is a Model Context Protocol (MCP) server that provides access to stock market data from [Financial Datasets](https://www.financialdatasets.ai/), [Alpha Vantage](https://www.alphavantage.co/), and [Zerodha Kite](https://kite.trade/). 
 
-It allows Claude and other AI assistants to retrieve income statements, balance sheets, cash flow statements, stock prices, technical indicators, and market news directly through the MCP interface.
+It allows Claude and other AI assistants to retrieve global technicals, historical data, and act as a fully-featured trading assistant for the Indian Stock Market (NSE/BSE).
 
 ## Available Tools
 
@@ -30,6 +30,19 @@ This MCP server provides the following tools:
 - **get_alpha_vantage_news**: Get market news and sentiment analysis.
 - **get_currency_exchange_rate**: Get real-time FX or Crypto exchange rates.
 - **get_technical_indicator**: Get technical indicators (SMA, RSI, EMA, etc.).
+
+### Zerodha Kite Tools (Indian Market)
+*Note: Requires active Kite Connect subscription.*
+- **kite_login**: Get the Zerodha login URL for authentication.
+- **kite_generate_session**: Exchange the request token for a session proxy.
+- **kite_get_profile**: Get user account profile.
+- **kite_get_margins**: Check available funds for trading (Equity/Commodity).
+- **kite_get_holdings**: Get long-term portfolio stock holdings.
+- **kite_get_positions**: Get current day/overnight trading positions.
+- **kite_get_orders**: Get the list of all orders.
+- **kite_get_quote**: Get real-time quotes for NSE/BSE instruments.
+- **kite_get_historical_data**: Get historical OHLC data.
+- **kite_place_order**: Place a new market/limit order.
 
 ## Setup
 
@@ -74,6 +87,8 @@ This MCP server provides the following tools:
     # Set API keys in .env
     FINANCIAL_DATASETS_API_KEY=your-financial-datasets-api-key
     ALPHA_VANTAGE_API_KEY=your-alpha-vantage-api-key
+    KITE_API_KEY=your-kite-api-key
+    KITE_API_SECRET=your-kite-api-secret
    ```
 
 5. Run the server:
